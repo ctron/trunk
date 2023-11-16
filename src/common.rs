@@ -162,7 +162,14 @@ pub async fn run_command(
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
-        .with_context(|| format!("error spawning {} call", name))?
+        .with_context(|| {
+            format!(
+                "error spawning {} call to executable '{}' with args: '{:?}'",
+                name,
+                path.to_string_lossy(),
+                args
+            )
+        })?
         .wait()
         .await
         .with_context(|| format!("error during {} call", name))?;
