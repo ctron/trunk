@@ -84,10 +84,10 @@ impl Application {
     /// Default version to use if not set by the user.
     fn default_version(&self) -> &str {
         match self {
-            Self::Sass => "1.63.6",
-            Self::TailwindCss => "3.3.2",
-            Self::WasmBindgen => "0.2.87",
-            Self::WasmOpt => "version_113",
+            Self::Sass => "1.69.5",
+            Self::TailwindCss => "3.3.5",
+            Self::WasmBindgen => "0.2.88",
+            Self::WasmOpt => "version_116",
         }
     }
 
