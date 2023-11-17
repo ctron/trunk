@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, ensure};
 use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
@@ -73,12 +73,16 @@ impl Sass {
         } else {
             "expanded"
         };
-        let path_str = dunce::simplified(&self.asset.path).display().to_string();
+
+        let source_path_str = dunce::simplified(&self.asset.path).display().to_string();
+        let source_test = common::path_exists_and(&source_path_str, |m| m.is_file()).await;
+        ensure!(source_test.ok() == Some(true), "SASS source path '{source_path_str}' does not exist / is not a file");
+
         let file_name = format!("{}.css", &self.asset.file_stem.to_string_lossy());
         let file_path = dunce::simplified(&self.cfg.staging_dist.join(&file_name))
             .display()
             .to_string();
-        let args = &["--no-source-map", "-s", style, &path_str, &file_path];
+        let args = &["--no-source-map", "-s", style, &source_path_str, &file_path];
 
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "compiling sass/scss");

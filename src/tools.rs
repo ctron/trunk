@@ -332,6 +332,7 @@ async fn install(app: Application, archive_file: File, target: PathBuf) -> Resul
 
     let archive_file = archive_file.into_std().await;
 
+    let target_clone = target.clone();
     tokio::task::spawn_blocking(move || {
         let mut archive = if app == Application::Sass && cfg!(target_os = "windows") {
             Archive::new_zip(archive_file)?
@@ -355,9 +356,18 @@ async fn install(app: Application, archive_file: File, target: PathBuf) -> Resul
             }
         }
 
-        Ok(())
+        Result::<()>::Ok(())
     })
-    .await?
+    .await
+    .context("Unable to join on spawn_blocking")?
+    .context("Could not extract files")?;
+
+    let test = is_executable(&target_clone).await;
+    ensure!(
+        test.ok() == Some(true),
+        "Extracted application binary {target_clone:?} is not executable."
+    );
+    Ok(())
 }
 
 /// Locate the cache dir for trunk and make sure it exists.

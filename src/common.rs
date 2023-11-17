@@ -96,9 +96,14 @@ pub async fn remove_dir_all(from_dir: PathBuf) -> Result<()> {
 
 /// Checks if path exists.
 pub async fn path_exists(path: impl AsRef<Path>) -> Result<bool> {
+    path_exists_and(path, |_| true).await
+}
+
+/// Checks if path exists and metadata matches the given predicate.
+pub async fn path_exists_and(path: impl AsRef<Path>, and: impl FnOnce(Metadata) -> bool) -> Result<bool> {
     tokio::fs::metadata(path.as_ref())
         .await
-        .map(|_| true)
+        .map(and)
         .or_else(|error| {
             if error.kind() == ErrorKind::NotFound {
                 Ok(false)
@@ -175,8 +180,9 @@ pub async fn run_command(
         bail!("{name} call to executable '{}' with args: '{args:?}' returned a bad status\nout: {stdout}\nerr: {stderr}", path.to_string_lossy());
     }
 
-    tracing::info!("{name} call produced stdout output: {stdout}");
-
+    if !stdout.is_empty() {
+        tracing::info!("{name} call produced stdout output: {stdout}");
+    }
     if !stderr.is_empty() {
         tracing::warn!("{name} call produced stderr output: {stderr}");
     }
