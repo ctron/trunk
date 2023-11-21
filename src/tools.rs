@@ -434,7 +434,7 @@ mod archive {
                     let mut out_file = extract_file(&mut tar_file, file, target)?;
 
                     if let Ok(mode) = tar_file.header().mode() {
-                        set_file_permissions(&mut out_file, mode)?;
+                        set_file_permissions(&mut out_file, mode, Some(file))?;
                     }
                 }
                 Self::Zip(archive) => {
@@ -444,7 +444,7 @@ mod archive {
                     let mut out_file = extract_file(&mut zip_file, file, target)?;
 
                     if let Some(mode) = zip_file.unix_mode() {
-                        set_file_permissions(&mut out_file, mode)?;
+                        set_file_permissions(&mut out_file, mode, Some(file))?;
                     }
                 }
                 Self::None(in_file) => {
@@ -458,15 +458,20 @@ mod archive {
                     let mut out_file_path = target.to_path_buf();
                     out_file_path.push(file);
                     let mut out_file =
-                        File::create(out_file_path).context("failed to open binary to copy")?;
+                        File::create(&out_file_path).context("failed to open binary to copy")?;
                     {
                         let mut reader = BufReader::new(in_file);
                         let mut writer = BufWriter::new(&out_file);
 
                         std::io::copy(&mut reader, &mut writer).context("failed to copy binary")?;
                     }
-                    set_file_permissions(&mut out_file, 0o755)?; // rwx for user, rx for group and
-                                                                 // other.
+                    set_file_permissions(
+                        &mut out_file,
+                        0o755,
+                        Some(out_file_path.to_string_lossy()),
+                    )?;
+                    // rwx for user, rx for group and
+                    // other.
                 }
             }
 
@@ -552,11 +557,20 @@ mod archive {
     }
 
     /// Set the executable flag for a file. Only has an effect on UNIX platforms.
-    fn set_file_permissions(file: &mut File, mode: u32) -> Result<()> {
+    fn set_file_permissions(
+        file: &mut File,
+        mode: u32,
+        file_path_hint: Option<impl AsRef<str>>,
+    ) -> Result<()> {
         #[cfg(unix)]
         {
             use std::fs::Permissions;
             use std::os::unix::fs::PermissionsExt;
+
+            match file_path_hint {
+                Some(path) => tracing::info!("Setting permission of '{}' to {mode}", path.as_ref()),
+                None => tracing::info!("Setting permission of 'unknown file' to {mode}",),
+            };
 
             file.set_permissions(Permissions::from_mode(mode))
                 .context("failed setting file permissions")?;
