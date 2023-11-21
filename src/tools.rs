@@ -14,7 +14,7 @@ use tokio::process::Command;
 use tokio::sync::{Mutex, OnceCell};
 
 use self::archive::Archive;
-use crate::common::is_executable;
+use crate::common::{is_executable, path_exists, path_exists_and};
 
 /// The application to locate and eventually download when calling [`get`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -362,11 +362,24 @@ async fn install(app: Application, archive_file: File, target: PathBuf) -> Resul
     .context("Unable to join on spawn_blocking")?
     .context("Could not extract files")?;
 
+    let test = path_exists(&target_clone).await;
+    ensure!(
+        test.ok() == Some(true),
+        "Extracted application binary {target_clone:?} could not be found."
+    );
+
+    let test = path_exists_and(&target_clone, |m| m.is_file()).await;
+    ensure!(
+        test.ok() == Some(true),
+        "Extracted application binary {target_clone:?} is not a file"
+    );
+
     let test = is_executable(&target_clone).await;
     ensure!(
         test.ok() == Some(true),
         "Extracted application binary {target_clone:?} is not executable."
     );
+
     Ok(())
 }
 
