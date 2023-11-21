@@ -16,7 +16,6 @@ use anyhow::{Context, Result};
 use clap::{ArgAction, Parser, Subcommand};
 use common::STARTING;
 use std::path::PathBuf;
-use tracing::log;
 use tracing_subscriber::prelude::*;
 
 #[tokio::main]
@@ -42,7 +41,7 @@ async fn main() -> Result<()> {
         .try_init()
         .context("error initializing logging")?;
 
-    log::info!(
+    tracing::info!(
         "{} Starting {} {}",
         STARTING,
         env!("CARGO_PKG_NAME"),

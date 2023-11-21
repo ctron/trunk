@@ -343,7 +343,7 @@ fn build_watcher(
     // Build the filesystem watcher & debouncer.
 
     if let Some(duration) = poll {
-        log::info!(
+        tracing::info!(
             "Running in polling mode: {}",
             humantime::Duration::from(duration)
         );

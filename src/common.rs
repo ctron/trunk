@@ -100,7 +100,10 @@ pub async fn path_exists(path: impl AsRef<Path>) -> Result<bool> {
 }
 
 /// Checks if path exists and metadata matches the given predicate.
-pub async fn path_exists_and(path: impl AsRef<Path>, and: impl FnOnce(Metadata) -> bool) -> Result<bool> {
+pub async fn path_exists_and(
+    path: impl AsRef<Path>,
+    and: impl FnOnce(Metadata) -> bool,
+) -> Result<bool> {
     tokio::fs::metadata(path.as_ref())
         .await
         .map(and)
@@ -179,12 +182,11 @@ pub async fn run_command(
     if !status.success() {
         bail!("{name} call to executable '{}' with args: '{args:?}' returned a bad status\nout: {stdout}\nerr: {stderr}", path.to_string_lossy());
     }
-
     if !stdout.is_empty() {
-        tracing::info!("{name} call produced stdout output: {stdout}");
+        tracing::info!(stdout = stdout.into_owned(), "{name} call produced output");
     }
     if !stderr.is_empty() {
-        tracing::warn!("{name} call produced stderr output: {stderr}");
+        tracing::warn!(stderr = stderr.into_owned(), "{name} call produced output");
     }
 
     Ok(())

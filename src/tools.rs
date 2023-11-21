@@ -571,9 +571,9 @@ mod archive {
 
             match file_path_hint {
                 Some(path) => {
-                    tracing::info!("Setting permission of '{}' to {mode:#o}", path.as_ref())
+                    tracing::debug!("Setting permission of '{}' to {mode:#o}", path.as_ref())
                 }
-                None => tracing::info!("Setting permission of 'unknown file' to {mode:#o}"),
+                None => tracing::debug!("Setting permission of 'unknown file' to {mode:#o}"),
             };
 
             file.set_permissions(Permissions::from_mode(mode))
