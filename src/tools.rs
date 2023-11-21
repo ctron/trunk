@@ -113,10 +113,10 @@ impl Application {
 
         Ok(match self {
             Self::Sass => match (target_os, target_arch) {
-              ("windows", "x86_64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-windows-x64.zip"),
-              ("macos" | "linux", "x86_64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target_os}-x64.tar.gz"),
-              ("macos" | "linux", "aarch64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target_os}-arm64.tar.gz"),
-              _ => bail!("Unable to download Sass for {target_os} {target_arch}")
+                ("windows", "x86_64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-windows-x64.zip"),
+                ("macos" | "linux", "x86_64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target_os}-x64.tar.gz"),
+                ("macos" | "linux", "aarch64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target_os}-arm64.tar.gz"),
+                _ => bail!("Unable to download Sass for {target_os} {target_arch}")
             },
 
             Self::TailwindCss => match (target_os, target_arch) {
@@ -127,17 +127,17 @@ impl Application {
             },
 
             Self::WasmBindgen => match (target_os, target_arch) {
-              ("windows", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-pc-windows-msvc.tar.gz"),
-              ("macos", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-apple-darwin.tar.gz"),
-              ("macos", "aarch64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-apple-darwin.tar.gz"),
-              ("linux", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-unknown-linux-musl.tar.gz"),
-              ("linux", "aarch64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-unknown-linux-gnu.tar.gz"),
-              _ => bail!("Unable to download wasm-bindgen for {target_os} {target_arch}")
+                ("windows", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-pc-windows-msvc.tar.gz"),
+                ("macos", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-apple-darwin.tar.gz"),
+                ("macos", "aarch64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-apple-darwin.tar.gz"),
+                ("linux", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-unknown-linux-musl.tar.gz"),
+                ("linux", "aarch64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-unknown-linux-gnu.tar.gz"),
+                _ => bail!("Unable to download wasm-bindgen for {target_os} {target_arch}")
             },
 
             Self::WasmOpt => match (target_os, target_arch) {
-              ("macos", "aarch64") => format!("https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-arm64-macos.tar.gz"),
-              _ => format!("https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-{target_arch}-{target_os}.tar.gz")
+                ("macos", "aarch64") => format!("https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-arm64-macos.tar.gz"),
+                _ => format!("https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-{target_arch}-{target_os}.tar.gz")
             }
         })
     }
@@ -327,12 +327,12 @@ async fn download(app: Application, version: &str) -> Result<PathBuf> {
 /// Install an application from a downloaded archive locating and copying it to the given target
 /// location.
 #[tracing::instrument(level = "trace")]
-async fn install(app: Application, archive_file: File, target: PathBuf) -> Result<()> {
+async fn install(app: Application, archive_file: File, target_directory: PathBuf) -> Result<()> {
     tracing::info!("installing {}", app.name());
 
     let archive_file = archive_file.into_std().await;
 
-    let target_clone = target.clone();
+    let target_directory_clone = target_directory.clone();
     tokio::task::spawn_blocking(move || {
         let mut archive = if app == Application::Sass && cfg!(target_os = "windows") {
             Archive::new_zip(archive_file)?
@@ -341,12 +341,12 @@ async fn install(app: Application, archive_file: File, target: PathBuf) -> Resul
         } else {
             Archive::new_tar_gz(archive_file)
         };
-        archive.extract_file(app.path(), &target)?;
+        archive.extract_file(app.path(), &target_directory)?;
 
         for path in app.extra_paths() {
             // After extracting one file the archive must be reset.
             archive = archive.reset()?;
-            if archive.extract_file(path, &target).is_err() {
+            if archive.extract_file(path, &target_directory).is_err() {
                 tracing::warn!(
                     "attempted to extract '{}' from {:?} archive, but it is not present, this \
                      could be due to version updates",
@@ -362,19 +362,20 @@ async fn install(app: Application, archive_file: File, target: PathBuf) -> Resul
     .context("Unable to join on spawn_blocking")?
     .context("Could not extract files")?;
 
-    let test = path_exists(&target_clone).await;
+    let main_executable = target_directory_clone.join(app.path());
+    let test = path_exists(&main_executable).await;
     ensure!(
         test.ok() == Some(true),
         "Extracted application binary {target_clone:?} could not be found."
     );
 
-    let test = path_exists_and(&target_clone, |m| m.is_file()).await;
+    let test = path_exists_and(&main_executable, |m| m.is_file()).await;
     ensure!(
         test.ok() == Some(true),
         "Extracted application binary {target_clone:?} is not a file"
     );
 
-    let test = is_executable(&target_clone).await;
+    let test = is_executable(&main_executable).await;
     ensure!(
         test.ok() == Some(true),
         "Extracted application binary {target_clone:?} is not executable."
@@ -426,12 +427,12 @@ mod archive {
             Self::None(file)
         }
 
-        pub fn extract_file(&mut self, file: &str, target: &Path) -> Result<()> {
+        pub fn extract_file(&mut self, file: &str, target_directory: &Path) -> Result<()> {
             match self {
                 Self::TarGz(archive) => {
                     let mut tar_file =
                         find_tar_entry(archive, file)?.context("file not found in archive")?;
-                    let mut out_file = extract_file(&mut tar_file, file, target)?;
+                    let mut out_file = extract_file(&mut tar_file, file, target_directory)?;
 
                     if let Ok(mode) = tar_file.header().mode() {
                         set_file_permissions(&mut out_file, mode, Some(file))?;
@@ -441,21 +442,21 @@ mod archive {
                     let zip_index =
                         find_zip_entry(archive, file)?.context("file not found in archive")?;
                     let mut zip_file = archive.by_index(zip_index)?;
-                    let mut out_file = extract_file(&mut zip_file, file, target)?;
+                    let mut out_file = extract_file(&mut zip_file, file, target_directory)?;
 
                     if let Some(mode) = zip_file.unix_mode() {
                         set_file_permissions(&mut out_file, mode, Some(file))?;
                     }
                 }
                 Self::None(in_file) => {
-                    let create_dir_result = std::fs::create_dir(target);
+                    let create_dir_result = std::fs::create_dir(target_directory);
                     if let Err(e) = &create_dir_result {
                         if e.kind() != std::io::ErrorKind::AlreadyExists {
                             create_dir_result.context("failed to open file for")?;
                         }
                     }
 
-                    let mut out_file_path = target.to_path_buf();
+                    let mut out_file_path = target_directory.to_path_buf();
                     out_file_path.push(file);
                     let mut out_file =
                         File::create(&out_file_path).context("failed to open binary to copy")?;
@@ -542,14 +543,15 @@ mod archive {
         Ok(None)
     }
 
-    fn extract_file(mut read: impl Read, file: &str, target: &Path) -> Result<File> {
-        let out = target.join(file);
+    fn extract_file(mut read: impl Read, file: &str, target_directory: &Path) -> Result<File> {
+        let out = target_directory.join(file);
 
         if let Some(parent) = out.parent() {
             fs::create_dir_all(parent).context("failed creating output directory")?;
         }
 
-        let mut out = File::create(target.join(file)).context("failed creating output file")?;
+        let mut out =
+            File::create(target_directory.join(file)).context("failed creating output file")?;
         io::copy(&mut read, &mut out)
             .context("failed copying over final output file from archive")?;
 
