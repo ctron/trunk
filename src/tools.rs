@@ -366,19 +366,19 @@ async fn install(app: Application, archive_file: File, target_directory: PathBuf
     let test = path_exists(&main_executable).await;
     ensure!(
         test.ok() == Some(true),
-        "Extracted application binary {target_clone:?} could not be found."
+        "Extracted application binary {main_executable:?} could not be found."
     );
 
     let test = path_exists_and(&main_executable, |m| m.is_file()).await;
     ensure!(
         test.ok() == Some(true),
-        "Extracted application binary {target_clone:?} is not a file"
+        "Extracted application binary {main_executable:?} is not a file"
     );
 
     let test = is_executable(&main_executable).await;
     ensure!(
         test.ok() == Some(true),
-        "Extracted application binary {target_clone:?} is not executable."
+        "Extracted application binary {main_executable:?} is not executable."
     );
 
     Ok(())
