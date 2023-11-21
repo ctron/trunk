@@ -570,8 +570,10 @@ mod archive {
             use std::os::unix::fs::PermissionsExt;
 
             match file_path_hint {
-                Some(path) => tracing::info!("Setting permission of '{}' to {mode}", path.as_ref()),
-                None => tracing::info!("Setting permission of 'unknown file' to {mode}",),
+                Some(path) => {
+                    tracing::info!("Setting permission of '{}' to {mode:#o}", path.as_ref())
+                }
+                None => tracing::info!("Setting permission of 'unknown file' to {mode:#o}"),
             };
 
             file.set_permissions(Permissions::from_mode(mode))
