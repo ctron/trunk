@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use std::fs::Metadata;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
+use std::process::Stdio;
 
 use anyhow::{anyhow, bail, Context, Result};
 use async_recursion::async_recursion;
@@ -164,29 +165,27 @@ pub async fn run_command(
     args: &[impl AsRef<OsStr> + Debug],
 ) -> Result<()> {
     tracing::debug!(?args, "{name} args");
-    let output = Command::new(path)
+
+    let status = Command::new(path)
         .args(args)
-        .output()
-        .await
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
         .with_context(|| {
             format!(
                 "error running {name} using executable '{}' with args: '{args:?}'",
                 path.to_string_lossy(),
             )
-        })?;
-
-    let status = output.status;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
+        })?
+        .wait()
+        .await
+        .with_context(|| format!("error during {} call", name))?;
 
     if !status.success() {
-        bail!("{name} call to executable '{}' with args: '{args:?}' returned a bad status\nout: {stdout}\nerr: {stderr}", path.to_string_lossy());
-    }
-    if !stdout.is_empty() {
-        tracing::info!(stdout = stdout.into_owned(), "{name} call produced output");
-    }
-    if !stderr.is_empty() {
-        tracing::warn!(stderr = stderr.into_owned(), "{name} call produced output");
+        bail!(
+            "{name} call to executable '{}' with args: '{args:?}' returned a bad status: {status}",
+            path.to_string_lossy()
+        );
     }
 
     Ok(())

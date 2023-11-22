@@ -111,7 +111,7 @@ impl WatchSystem {
 
         // Cooldown
         let watcher_cooldown = cfg.enable_cooldown.then_some(WATCHER_COOLDOWN);
-        log::debug!(
+        tracing::debug!(
             "Build cooldown: {:?}",
             watcher_cooldown.map(humantime::Duration::from)
         );
@@ -161,7 +161,7 @@ impl WatchSystem {
 
     #[tracing::instrument(level = "trace", skip(self))]
     async fn build_complete(&mut self, build_result: Result<(), anyhow::Error>) {
-        log::debug!("Build reported completion");
+        tracing::debug!("Build reported completion");
 
         // record last finish timestamp
         self.last_build_finished = Instant::now();
