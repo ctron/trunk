@@ -179,8 +179,7 @@ pub async fn run_command(
         })?
         .wait()
         .await
-        .with_context(|| format!("error during {} call", name))?;
-
+        .with_context(|| format!("error during {name} call"))?;
     if !status.success() {
         bail!(
             "{name} call to executable '{}' with args: '{args:?}' returned a bad status: {status}",
