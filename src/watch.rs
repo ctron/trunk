@@ -16,7 +16,6 @@ use std::time::Duration;
 use tokio::sync::{broadcast, mpsc, watch, Mutex};
 use tokio::time::Instant;
 use tokio_stream::wrappers::BroadcastStream;
-use tracing::log;
 
 pub enum FsDebouncer {
     Default(Debouncer<RecommendedWatcher, FileIdMap>),
