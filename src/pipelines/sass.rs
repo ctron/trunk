@@ -110,7 +110,7 @@ impl Sass {
 
         let css = fs::read_to_string(&temp_target_file_path)
             .await
-            .with_context(|| format!("error reading CSS result file '{file_path}'"))?;
+            .with_context(|| format!("error reading CSS result file '{temp_target_file_path}'"))?;
         fs::remove_file(&temp_target_file_path).await?;
 
         // Check if the specified SASS/SCSS file should be inlined.
