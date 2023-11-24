@@ -165,7 +165,6 @@ pub async fn run_command(
     args: &[impl AsRef<OsStr> + Debug],
 ) -> Result<()> {
     tracing::debug!(?args, "{name} args");
-
     let status = Command::new(path)
         .args(args)
         .stdout(Stdio::inherit())
@@ -174,7 +173,7 @@ pub async fn run_command(
         .with_context(|| {
             format!(
                 "error running {name} using executable '{}' with args: '{args:?}'",
-                path.to_string_lossy(),
+                path.display(),
             )
         })?
         .wait()
@@ -183,9 +182,8 @@ pub async fn run_command(
     if !status.success() {
         bail!(
             "{name} call to executable '{}' with args: '{args:?}' returned a bad status: {status}",
-            path.to_string_lossy()
+            path.display()
         );
     }
-
     Ok(())
 }
