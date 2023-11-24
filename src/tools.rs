@@ -466,13 +466,7 @@ mod archive {
 
                         std::io::copy(&mut reader, &mut writer).context("failed to copy binary")?;
                     }
-                    set_file_permissions(
-                        &mut out_file,
-                        0o755,
-                        Some(out_file_path.to_string_lossy()),
-                    )?;
-                    // rwx for user, rx for group and
-                    // other.
+                    set_file_permissions(&mut out_file, 0o755, Some(out_file_path.display()))?;
                 }
             }
 

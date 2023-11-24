@@ -67,7 +67,7 @@ impl BuildSystem {
             .with_context(|| {
                 format!(
                     "error creating build environment directory: {}",
-                    self.cfg.final_dist.to_string_lossy()
+                    self.cfg.final_dist.display()
                 )
             })?;
 
@@ -102,14 +102,14 @@ impl BuildSystem {
         remove_dir_all(staging_dist.into()).await.with_context(|| {
             format!(
                 "error cleaning staging dist dir: {}",
-                staging_dist.to_string_lossy()
+                staging_dist.display()
             )
         })?;
 
         fs::create_dir_all(staging_dist).await.with_context(|| {
             format!(
                 "error creating build environment directory: {}",
-                staging_dist.to_string_lossy()
+                staging_dist.display()
             )
         })?;
 
