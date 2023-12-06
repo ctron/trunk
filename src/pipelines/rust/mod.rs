@@ -466,10 +466,7 @@ impl RustApp {
         let arg_out_path = format!("--out-dir={}", bindgen_out);
         let arg_out_name = format!("--out-name={}", &hashed_name);
         let target_wasm = wasm.to_string_lossy().to_string();
-        let target_type = match self.app_type {
-            RustAppType::Main => "--target=web",
-            RustAppType::Worker => "--target=no-modules",
-        };
+        let target_type = "--target=web";
 
         let mut args = vec![target_type, &arg_out_path, &arg_out_name, &target_wasm];
         if self.keep_debug {
