@@ -1,8 +1,8 @@
 use reqwest::Url;
-use schemars::JsonSchema;
-use schemars::r#gen::SchemaGenerator;
-use schemars::schema::{Schema, SchemaObject};
+use schemars::{JsonSchema, json_schema};
+use schemars::{Schema, generate::SchemaGenerator};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
+use std::borrow::Cow;
 use std::convert::Infallible;
 use std::ffi::OsStr;
 use std::fmt::{Display, Formatter};
@@ -72,16 +72,19 @@ impl Serialize for BaseUrl {
 }
 
 impl JsonSchema for BaseUrl {
-    fn schema_name() -> String {
-        "BaseUrl".to_string()
+    fn schema_name() -> Cow<'static, str> {
+        "BaseUrl".into()
     }
 
-    fn json_schema(r#gen: &mut SchemaGenerator) -> Schema {
-        let mut schema: SchemaObject = String::json_schema(r#gen).into();
+    fn schema_id() -> Cow<'static, str> {
+        concat!(module_path!(), "::BaseUrl").into()
+    }
 
-        schema.format = Some("uri".into());
-
-        schema.into()
+    fn json_schema(_: &mut SchemaGenerator) -> Schema {
+        json_schema!({
+            "type": "string",
+            "format": "uri"
+        })
     }
 }
 

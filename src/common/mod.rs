@@ -5,7 +5,7 @@ use anyhow::{Context, Result, anyhow, bail};
 use base64::{Engine, engine::general_purpose};
 use console::Emoji;
 use once_cell::sync::Lazy;
-use rand::TryRngCore;
+use rand::{TryRng, rngs::SysRng};
 use std::{
     collections::HashSet,
     ffi::OsStr,
@@ -207,7 +207,7 @@ pub fn check_target_not_found_err(err: anyhow::Error, target: &str) -> anyhow::E
         None => return err,
     };
     match io_err.kind() {
-        std::io::ErrorKind::NotFound => err.context(format!("'{target}' not found")),
+        ErrorKind::NotFound => err.context(format!("'{target}' not found")),
         _ => err,
     }
 }
@@ -279,7 +279,7 @@ pub fn path_to_href(path: impl AsRef<Path>) -> String {
 /// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/nonce
 pub fn nonce() -> anyhow::Result<String> {
     let mut buffer = [0u8; 16];
-    rand::rngs::OsRng.try_fill_bytes(&mut buffer)?;
+    SysRng.try_fill_bytes(&mut buffer)?;
     Ok(general_purpose::STANDARD.encode(buffer))
 }
 
