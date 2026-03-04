@@ -163,7 +163,7 @@ impl SriResult {
                 )
             };
             location
-                .append_html(head, &preload)
+                .append_html(head, preload)
                 .context("Unable to write SRI.")?;
         }
 

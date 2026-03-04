@@ -15,6 +15,7 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokio::task::JoinHandle;
 
 /// An Icon asset pipeline.
+#[derive(Debug)]
 pub struct Icon {
     /// The ID of this pipeline's source HTML element.
     id: usize,
@@ -129,7 +130,7 @@ impl IconOutput {
 
         dom.replace_with_html(
             &trunk_id_selector(self.id),
-            &format!(
+            format!(
                 r#"<link rel="icon" href="{base}{file}"{attrs}{nonce}/>"#,
                 base = &self.cfg.public_url,
                 file = self.file,

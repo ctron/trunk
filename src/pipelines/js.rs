@@ -16,6 +16,7 @@ use std::sync::Arc;
 use tokio::task::JoinHandle;
 
 /// A JS asset pipeline.
+#[derive(Debug)]
 pub struct Js {
     /// The ID of this pipeline's source HTML element.
     id: usize,
@@ -137,7 +138,7 @@ impl JsOutput {
 
         dom.replace_with_html(
             &super::trunk_script_id_selector(self.id),
-            &format!(
+            format!(
                 r#"<script src="{base}{file}"{attrs}{nonce}></script>"#,
                 attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_SCRIPT),
                 base = &self.cfg.public_url,

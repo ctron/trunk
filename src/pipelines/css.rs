@@ -16,6 +16,7 @@ use std::sync::Arc;
 use tokio::task::JoinHandle;
 
 /// A CSS asset pipeline.
+#[derive(Debug)]
 pub struct Css {
     /// The ID of this pipeline's source HTML element.
     id: usize,
@@ -132,7 +133,7 @@ impl CssOutput {
 
         dom.replace_with_html(
             &super::trunk_id_selector(self.id),
-            &format!(
+            format!(
                 r#"<link rel="stylesheet" href="{base}{file}"{attrs}/>"#,
                 base = &self.cfg.public_url,
                 file = self.file,

@@ -82,6 +82,7 @@ pub enum TrunkAssetReference {
 /// of each pipeline to implement a pipeline finalizer method for its pipeline output in order to
 /// update the finalized HTML for asset links and the like.
 #[allow(clippy::large_enum_variant)]
+#[derive(Debug)]
 pub enum TrunkAsset {
     Css(Css),
     Sass(Sass),
@@ -233,6 +234,7 @@ pub enum ImageType {
 }
 
 /// An asset file to be processed by some build pipeline.
+#[derive(Debug)]
 pub struct AssetFile {
     /// The canonicalized path to the target file.
     pub path: PathBuf,

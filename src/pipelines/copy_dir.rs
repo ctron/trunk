@@ -12,6 +12,7 @@ use tokio::fs;
 use tokio::task::JoinHandle;
 
 /// A CopyDir asset pipeline.
+#[derive(Debug)]
 pub struct CopyDir {
     /// The ID of this pipeline's source HTML element.
     id: usize,

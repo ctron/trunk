@@ -15,6 +15,7 @@ use std::{path::PathBuf, sync::Arc};
 use tokio::{fs, task::JoinHandle};
 
 /// A tailwind css asset pipeline.
+#[derive(Debug)]
 pub struct TailwindCssExtra {
     /// The ID of this pipeline's source HTML element.
     id: usize,
@@ -208,6 +209,6 @@ impl TailwindCssExtraOutput {
                 )
             }
         };
-        dom.replace_with_html(&super::trunk_id_selector(self.id), &html)
+        dom.replace_with_html(&super::trunk_id_selector(self.id), html)
     }
 }

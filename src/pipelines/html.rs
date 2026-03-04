@@ -13,8 +13,9 @@ use crate::{
     },
     processing::minify::minify_html,
 };
-use anyhow::{Context, Result, ensure};
+use anyhow::{Context, Result, anyhow, ensure};
 use futures_util::stream::{FuturesUnordered, StreamExt};
+use parking_lot::Mutex;
 use std::{path::PathBuf, sync::Arc};
 use tokio::{
     fs,
@@ -93,7 +94,8 @@ impl HtmlPipeline {
                 allow_self_closing_script: self.cfg.allow_self_closing_script,
             },
         )?;
-        let mut partial_assets = vec![];
+
+        let partial_assets = Arc::new(Mutex::new(vec![]));
 
         // Since the `lol_html` doesn't provide an iterator for elements, we must use our own id.
         let mut id = 0;
@@ -104,40 +106,49 @@ impl HtmlPipeline {
         //
         // This is the first parsing of the HTML meaning it is pretty likely to receive
         // invalid HTML at this stage.
-        target_html.select_mut(r#"link[data-trunk], script[data-trunk]"#, |el| {
-            'l: {
-                el.set_attribute(TRUNK_ID, &id.to_string())?;
+        {
+            let partial_assets = Arc::clone(&partial_assets);
+            let cfg = self.cfg.clone();
+            let target_html_dir = self.target_html_dir.clone();
+            let ignore_chan = self.ignore_chan.clone();
+            target_html.select_mut(r#"link[data-trunk], script[data-trunk]"#, move |el| {
+                'l: {
+                    el.set_attribute(TRUNK_ID, &id.to_string())?;
 
-                // Both are function pointers, no need to branch out.
-                let asset_constructor = match el.tag_name().as_str() {
-                    "link" => TrunkAssetReference::Link,
-                    "script" => TrunkAssetReference::Script,
-                    // Just an early break since we won't do anything else.
-                    _ => break 'l,
-                };
+                    // Both are function pointers, no need to branch out.
+                    let asset_constructor = match el.tag_name().as_str() {
+                        "link" => TrunkAssetReference::Link,
+                        "script" => TrunkAssetReference::Script,
+                        // Just an early break since we won't do anything else.
+                        _ => break 'l,
+                    };
 
-                // Accumulate all attrs. The main reason we collect this as
-                // raw data instead of passing around the link itself, is the lifetime
-                // requirements of elements used in `lol_html::html_content::HtmlRewriter`.
-                let attrs = el.attributes().iter().fold(Attrs::new(), |mut acc, attr| {
-                    acc.insert(attr.name(), attr.value().into());
-                    acc
-                });
+                    // Accumulate all attrs. The main reason we collect this as
+                    // raw data instead of passing around the link itself, is the lifetime
+                    // requirements of elements used in `lol_html::html_content::HtmlRewriter`.
+                    let attrs = el.attributes().iter().fold(Attrs::new(), |mut acc, attr| {
+                        acc.insert(attr.name(), attr.value().into());
+                        acc
+                    });
 
-                let asset = TrunkAsset::from_html(
-                    self.cfg.clone(),
-                    self.target_html_dir.clone(),
-                    self.ignore_chan.clone(),
-                    asset_constructor(attrs),
-                    id,
-                );
+                    let asset = TrunkAsset::from_html(
+                        cfg.clone(),
+                        target_html_dir.clone(),
+                        ignore_chan.clone(),
+                        asset_constructor(attrs),
+                        id,
+                    );
 
-                partial_assets.push(asset);
-            }
-            id += 1;
-            Ok(())
-        })?;
+                    partial_assets.lock().push(asset);
+                }
+                id += 1;
+                Ok(())
+            })?;
+        }
 
+        let partial_assets = Arc::try_unwrap(partial_assets)
+            .map_err(|_| anyhow!("closure still holds reference"))?
+            .into_inner();
         let mut assets: Vec<TrunkAsset> = futures_util::future::join_all(partial_assets)
             .await
             .into_iter()
@@ -250,17 +261,21 @@ impl HtmlPipeline {
     /// Prepare the document for final output.
     fn finalize_html(&self, target_html: &mut Document) -> Result<()> {
         // Write public_url to base element.
-        target_html.select_mut(&format!("html head base[{PUBLIC_URL_MARKER_ATTR}]"), |el| {
-            el.remove_attribute(PUBLIC_URL_MARKER_ATTR);
-            el.set_attribute("href", &self.cfg.public_url)?;
-            Ok(())
-        })?;
+        let public_url = self.cfg.public_url.clone();
+        target_html.select_mut(
+            &format!("html head base[{PUBLIC_URL_MARKER_ATTR}]"),
+            move |el| {
+                el.remove_attribute(PUBLIC_URL_MARKER_ATTR);
+                el.set_attribute("href", &public_url)?;
+                Ok(())
+            },
+        )?;
 
         // Inject the WebSocket autoloader.
         if self.cfg.inject_autoloader {
             target_html.append_html(
                 "body",
-                &format!(
+                format!(
                     "<script{}>{}</script>",
                     nonce_attr(&self.cfg.create_nonce),
                     RELOAD_SCRIPT.replace(

@@ -82,7 +82,7 @@ impl RustAppOutput {
         params.insert("crossorigin".to_owned(), self.cross_origin.to_string());
 
         if let Some(pattern) = pattern_preload {
-            dom.append_html(head, &pattern_evaluate(pattern, &params))?;
+            dom.append_html(head, pattern_evaluate(pattern, &params))?;
         } else {
             self.integrities.clone().build().inject(
                 dom,
@@ -99,14 +99,14 @@ impl RustAppOutput {
         };
 
         match self.id {
-            Some(id) => dom.replace_with_html(&trunk_id_selector(id), &script)?,
+            Some(id) => dom.replace_with_html(&trunk_id_selector(id), script)?,
             None => {
                 if dom.len(body)? == 0 {
                     bail!(
                         r#"Document has neither a <link data-trunk rel="rust"/> nor a <body>. Either one must be present."#
                     );
                 }
-                dom.append_html(body, &script)?
+                dom.append_html(body, script)?
             }
         }
 

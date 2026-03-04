@@ -13,6 +13,7 @@ use std::sync::Arc;
 use tokio::task::JoinHandle;
 
 /// A CopyFile asset pipeline.
+#[derive(Debug)]
 pub struct CopyFile {
     /// The ID of this pipeline's source HTML element.
     id: usize,

@@ -1,5 +1,6 @@
 use anyhow::{Result, bail};
 use lol_html::{HtmlRewriter, Settings, element, html_content::Element};
+use std::{borrow::Cow, cell::Cell, rc::Rc};
 
 #[derive(Clone, Debug, Default)]
 pub struct DocumentOptions {
@@ -26,13 +27,12 @@ impl Document {
         let doc = Self(data.into());
 
         // Check for self-closed script tags such as "<script.../>"
-        doc.select("script", |el| {
+        doc.select("script", move |el| {
             if el.is_self_closing() {
                 if options.allow_self_closing_script {
                     tracing::warn!("Self-closing script tag found (allowed by configuration)");
-                }
-                else {
-                     bail!(
+                } else {
+                    bail!(
                         r#"Self-closing script tag found.
 
 Replace the self-closing script tag ("<script .../>") with a normally closed one such as "<script ...></script>".
@@ -65,12 +65,12 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
     pub fn select_mut(
         &mut self,
         selector: &str,
-        mut call: impl FnMut(&mut Element<'_, '_>) -> Result<()>,
+        mut call: impl FnMut(&mut Element<'_, '_>) -> Result<()> + 'static,
     ) -> Result<()> {
         let mut buf = Vec::new();
         HtmlRewriter::new(
             Settings {
-                element_content_handlers: vec![element!(selector, |el| {
+                element_content_handlers: vec![element!(selector, move |el| {
                     call(el)?;
                     Ok(())
                 })],
@@ -91,11 +91,11 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
     pub fn select(
         &self,
         selector: &str,
-        mut call: impl FnMut(&Element<'_, '_>) -> Result<()>,
+        mut call: impl FnMut(&Element<'_, '_>) -> Result<()> + 'static,
     ) -> Result<()> {
         HtmlRewriter::new(
             Settings {
-                element_content_handlers: vec![element!(selector, |el| {
+                element_content_handlers: vec![element!(selector, move |el| {
                     call(el)?;
                     Ok(())
                 })],
@@ -109,16 +109,26 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
     }
 
     /// Will silently fail when attempting to append to [Void Element](https://developer.mozilla.org/en-US/docs/Glossary/Void_element).
-    pub fn append_html(&mut self, selector: &str, html: &str) -> Result<()> {
-        self.select_mut(selector, |el| {
-            el.append(html, lol_html::html_content::ContentType::Html);
+    pub fn append_html(
+        &mut self,
+        selector: &str,
+        html: impl Into<Cow<'static, str>>,
+    ) -> Result<()> {
+        let html = html.into();
+        self.select_mut(selector, move |el| {
+            el.append(html.as_ref(), lol_html::html_content::ContentType::Html);
             Ok(())
         })
     }
 
-    pub fn replace_with_html(&mut self, selector: &str, html: &str) -> Result<()> {
-        self.select_mut(selector, |el| {
-            el.replace(html, lol_html::html_content::ContentType::Html);
+    pub fn replace_with_html(
+        &mut self,
+        selector: &str,
+        html: impl Into<Cow<'static, str>>,
+    ) -> Result<()> {
+        let html = html.into();
+        self.select_mut(selector, move |el| {
+            el.replace(html.as_ref(), lol_html::html_content::ContentType::Html);
             Ok(())
         })?;
         Ok(())
@@ -132,13 +142,15 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
     }
 
     pub fn len(&mut self, selector: &str) -> Result<usize> {
-        let mut len = 0;
-        self.select(selector, |_| {
-            len += 1;
+        let len = Rc::new(Cell::new(0));
+        let counter = Rc::clone(&len);
+
+        self.select(selector, move |_| {
+            counter.set(counter.get() + 1);
             Ok(())
         })?;
 
-        Ok(len)
+        Ok(len.get())
     }
 }
 

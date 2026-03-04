@@ -2,7 +2,7 @@ use anyhow::bail;
 use std::str::FromStr;
 
 /// Different optimization levels that can be configured with `wasm-opt`.
-#[derive(PartialEq, Eq, Default)]
+#[derive(PartialEq, Eq, Default, Debug)]
 pub enum WasmOptLevel {
     /// Default optimization passes.
     #[default]

@@ -11,6 +11,7 @@ use std::sync::Arc;
 use tokio::task::JoinHandle;
 
 /// An Inline asset pipeline.
+#[derive(Debug)]
 pub struct Inline {
     /// The ID of this pipeline's source HTML element.
     id: usize,
@@ -73,6 +74,7 @@ impl Inline {
 }
 
 /// The content type of a inlined file.
+#[derive(Debug)]
 pub enum ContentType {
     /// Html is just pasted into `index.html` as is.
     Html,
@@ -143,6 +145,6 @@ impl InlineOutput {
             ContentType::Module => format!(r#"<script type="module"{nonce}>{}</script>"#, self.content),
         };
 
-        dom.replace_with_html(&trunk_id_selector(self.id), &html)
+        dom.replace_with_html(&trunk_id_selector(self.id), html)
     }
 }

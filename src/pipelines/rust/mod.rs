@@ -42,6 +42,7 @@ use wasm_bindgen::{WasmBindgenFeatures, WasmBindgenTarget, find_wasm_bindgen_ver
 use wasm_opt::WasmOptLevel;
 
 /// A Rust application pipeline.
+#[derive(Debug)]
 pub struct RustApp {
     /// The ID of this pipeline's source HTML element.
     id: Option<usize>,

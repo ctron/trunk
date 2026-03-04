@@ -15,6 +15,7 @@ use std::{path::PathBuf, sync::Arc};
 use tokio::{fs, task::JoinHandle};
 
 /// A sass/scss asset pipeline.
+#[derive(Debug)]
 pub struct Sass {
     /// The ID of this pipeline's source HTML element.
     id: usize,
@@ -229,6 +230,6 @@ impl SassOutput {
                 )
             }
         };
-        dom.replace_with_html(&super::trunk_id_selector(self.id), &html)
+        dom.replace_with_html(&super::trunk_id_selector(self.id), html)
     }
 }
