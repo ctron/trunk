@@ -5419,7 +5419,7 @@ dependencies = [
 
 [[package]]
 name = "trunk"
-version = "0.22.0-beta.2"
+version = "0.22.0-beta.3"
 dependencies = [
  "anyhow",
  "async-compression",
